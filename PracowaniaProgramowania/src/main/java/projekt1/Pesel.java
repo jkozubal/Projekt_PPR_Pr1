@@ -1,32 +1,15 @@
 package projekt1;
 
 
-import org.eclipse.collections.api.list.MutableList;
-import org.eclipse.collections.api.set.SetIterable;
-import org.eclipse.collections.impl.multimap.list.FastListMultimap;
-import org.quartz.*;
-import org.quartz.impl.StdSchedulerFactory;
+import org.quartz.SchedulerException;
 
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.PrintWriter;
-import java.security.Key;
 import java.util.*;
-import java.util.Calendar;
-import java.util.Map.Entry;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
-import static java.lang.Integer.parseInt;
 import static java.lang.Long.parseLong;
 import static java.lang.Math.abs;
-import static java.lang.String.valueOf;
-import static java.util.Calendar.DAY_OF_WEEK;
-import static java.util.Map.Entry.comparingByValue;
-import static java.util.stream.Collectors.toMap;
-import static org.quartz.JobBuilder.newJob;
-import static org.quartz.SimpleScheduleBuilder.simpleSchedule;
-import static org.quartz.TriggerBuilder.newTrigger;
 
 public class Pesel{
     private static String Data;
@@ -68,10 +51,10 @@ public class Pesel{
                 }
                 PeopleData peopleData = new PeopleData(PESEL, name, cityName);
                 people.put(PESEL, peopleData);
-                List<PeopleData> list = new ArrayList<PeopleData>(people.values());
+                List<PeopleData> list = new ArrayList<>(people.values());
 
                 //first element of list
-                Collections.sort(list, new Sortbycity());
+                list.sort(new Sortbycity());
                 PeopleData first = list.get(0);
                 Data += first.getCity();
                 for(PeopleData model : list){
@@ -92,11 +75,20 @@ public class Pesel{
         }
 
     }
-    public static Boolean PESELChecker(String PESEL){
+    private static Boolean PESELChecker(String PESEL){
         try {
-            int check = Character.getNumericValue(PESEL.charAt(0)) * 9 + Character.getNumericValue(PESEL.charAt(1)) * 7 + Character.getNumericValue(PESEL.charAt(2)) * 3 + Character.getNumericValue(PESEL.charAt(3)) + Character.getNumericValue(PESEL.charAt(4)) * 9 + Character.getNumericValue(PESEL.charAt(5)) * 7 + Character.getNumericValue(PESEL.charAt(6)) * 3 + Character.getNumericValue(PESEL.charAt(7)) + Character.getNumericValue(PESEL.charAt(8)) * 9 + Character.getNumericValue(PESEL.charAt(9)) * 7;
-            if ((check % 10 == 0 || Character.getNumericValue(PESEL.charAt(10)) == check % 10) && PESEL.length() == 11) {
-                return true;
+            int check = Character.getNumericValue(PESEL.charAt(0)) * 9
+                    + Character.getNumericValue(PESEL.charAt(1)) * 7
+                    + Character.getNumericValue(PESEL.charAt(2)) * 3
+                    + Character.getNumericValue(PESEL.charAt(3))
+                    + Character.getNumericValue(PESEL.charAt(4)) * 9
+                    + Character.getNumericValue(PESEL.charAt(5)) * 7
+                    + Character.getNumericValue(PESEL.charAt(6)) * 3
+                    + Character.getNumericValue(PESEL.charAt(7))
+                    + Character.getNumericValue(PESEL.charAt(8)) * 9
+                    + Character.getNumericValue(PESEL.charAt(9)) * 7;
+            if ((check % 10 == 0 || Character.getNumericValue(PESEL.charAt(10)) == check % 10)) {
+                return PESEL.length() == 11;
             }
             return false;
         }
@@ -117,61 +109,37 @@ public class Pesel{
     }
     static class TimeTo extends  TimerTask {
         public void run() {
-            Timetable br = new Timetable();
             Calendar cal = Calendar.getInstance();
             int currentHour = cal.get(Calendar.HOUR_OF_DAY);
             int currentMin = cal.get(Calendar.MINUTE);
             int currentDay = cal.get(Calendar.DAY_OF_WEEK);
             int minutesInDay = currentHour * 60 + currentMin;
-            for (int x = 0; x < br.classesInMinutes.length; x++) {
-                if (minutesInDay <= (br.breaksInMinutes[x]) && (currentDay < 6 && currentDay > 1)) {
-                    if (br.breaksInMinutes[x] < br.classesInMinutes[x] || br.classesInMinutes[x] < minutesInDay) {
-                        System.out.println("Time to break is: " + (abs(br.breaksInMinutes[x] - minutesInDay)) / 60 + " hours and " + (abs(br.breaksInMinutes[x] - minutesInDay)) % 60 + " minutes.");
-                        break;
-                    } else {
-                        System.out.println("Time to break is: " + (abs(br.classesInMinutes[x] - minutesInDay)) / 60 + " hours and " + (abs(br.classesInMinutes[x] - minutesInDay)) % 60 + " minutes.");
-                        break;
-                    }
-                } else if (currentDay == 6 || currentDay == 7) {
-                    if (minutesInDay > br.breaksInMinutes[x]) {
-                        System.out.println("Time to classes is: " + (abs(br.classesInMinutes[0] + (1440 - minutesInDay)) / 60 + (24 * (8 - currentDay))) + " hours and " + (abs(br.classesInMinutes[0] + (1440 - minutesInDay)) / 60 + (24 * (8 - currentDay))) % 60 + " minutes.");
-                        break;
-                    } else {
-                        System.out.println("Time to classes is: " + (abs(br.classesInMinutes[0] + minutesInDay) / 60 + (24 * (9 - currentDay))) + " hours and " + (abs(br.classesInMinutes[0] + minutesInDay) / 60 + (24 * (9 - currentDay))) % 60 + " minutes.");
-                        break;
-                    }
-                } else if (minutesInDay > br.breaksInMinutes[br.breaksInMinutes.length - 1]) {
-                    System.out.println("Time to classes is: " + abs(br.classesInMinutes[0] + (1440 - minutesInDay)) + " hours and " + abs(br.classesInMinutes[0] + (1440 - minutesInDay))%60 + " minutes.");
-                }
-            }
+            TimeToClass(minutesInDay, currentDay);
         }
     }
-    public static Integer TimeTest(int testTime){
+    private static void TimeToClass(int minutes, int day){
         Timetable br = new Timetable();
-        Calendar cal = Calendar.getInstance();
-        int currentDay = cal.get(Calendar.DAY_OF_WEEK);
-        for (int x = 0; x < br.classesInMinutes.length; x++){
-            if(testTime <= (br.breaksInMinutes[x]) && (currentDay < 6 && currentDay > 1)) {
-                if (br.breaksInMinutes[x] < br.classesInMinutes[x] || br.classesInMinutes[x] < testTime) {
-                    return (abs(br.breaksInMinutes[x] - testTime));
+        for (int x = 0; x < br.classesInMinutes.length; x++) {
+            if (minutes <= (br.breaksInMinutes[x]) && (day < 6 && day > 1)) {
+                if (br.breaksInMinutes[x] < br.classesInMinutes[x] || br.classesInMinutes[x] < minutes) {
+                    System.out.println("Time to break is: " + (abs(br.breaksInMinutes[x] - minutes)) / 60 + " hours and " + (abs(br.breaksInMinutes[x] - minutes)) % 60 + " minutes.");
+                    break;
+                } else {
+                    System.out.println("Time to break is: " + (abs(br.classesInMinutes[x] - minutes)) / 60 + " hours and " + (abs(br.classesInMinutes[x] - minutes)) % 60 + " minutes.");
+                    break;
                 }
-                else {
-                    return (abs(br.classesInMinutes[x] - testTime));
+            } else if (day == 6 || day == 7) {
+                if (minutes > br.breaksInMinutes[x]) {
+                    System.out.println("Time to classes is: " + (abs(br.classesInMinutes[0] + (1440 - minutes)) / 60 + (24 * (8 - day))) + " hours and " + (abs(br.classesInMinutes[0] + (1440 - minutes)) / 60 + (24 * (8 - day))) % 60 + " minutes.");
+                    break;
+                } else {
+                    System.out.println("Time to classes is: " + (abs(br.classesInMinutes[0] + minutes) / 60 + (24 * (9 - day))) + " hours and " + (abs(br.classesInMinutes[0] + minutes) / 60 + (24 * (9 - day))) % 60 + " minutes.");
+                    break;
                 }
-            }
-            else if(currentDay == 6 || currentDay == 7){
-                if(testTime > br.breaksInMinutes[x]) {
-                    return (abs(br.classesInMinutes[0] + (1440-testTime)) + ((24 * (8 - currentDay)) * 60));
-                }
-                else {
-                    return (abs(br.classesInMinutes[0] - testTime) + (24 * (9 - currentDay)*60));
-                }
-            }
-            else if(testTime > br.breaksInMinutes[br.breaksInMinutes.length-1]){
-                return abs(br.classesInMinutes[0] + (1440-testTime));
+            } else if (minutes > br.breaksInMinutes[br.breaksInMinutes.length - 1]) {
+                System.out.println("Time to classes is: " + abs(br.classesInMinutes[0] + (1440 - minutes)) + " hours and " + abs(br.classesInMinutes[0] + (1440 - minutes))%60 + " minutes.");
             }
         }
-        return null;
     }
 
 }
